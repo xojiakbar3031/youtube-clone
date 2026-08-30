@@ -7,9 +7,31 @@
 // qolgan barcha komponentlar shu funksiya qaytargan formatga
 // ({id, title, channel, avatar, thumbnail, views, time, duration,
 //   category, description}) mos ishlaydi.
+//
+// Bundan tashqari bu faylda foydalanuvchi holatini (obunalar,
+// like/dislike, izohlar, ko'rish tarixi) brauzerning localStorage'ida
+// saqlaydigan kichik "store" ham bor — backend bo'lmasa ham
+// interfeys real ishlagandek tuyuladi.
 // ============================================================
 
-const MOCK_VIDEOS = [
+// Ochiq (public domain / CC0) namuna videolar — haqiqiy pleer sifatida
+// ishlatiladi, chunki hozircha real YouTube video fayllariga ruxsatimiz yo'q.
+var SAMPLE_VIDEO_URLS = [
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/VolkswagenGTIReview.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4"
+];
+
+var MOCK_VIDEOS = [
   {
     id: "v1",
     title: "React'ni noldan o'rganish — to'liq kurs 2026",
@@ -20,7 +42,9 @@ const MOCK_VIDEOS = [
     time: "2 kun oldin",
     duration: "12:45",
     category: "Coding",
-    description: "Ushbu darslikda React asoslarini noldan o'rganamiz: komponentlar, props, state, hook'lar va boshqalar."
+    description: "Ushbu darslikda React asoslarini noldan o'rganamiz: komponentlar, props, state, hook'lar va boshqalar.",
+    baseLikes: 8600,
+    videoUrl: SAMPLE_VIDEO_URLS[0]
   },
   {
     id: "v2",
@@ -32,7 +56,9 @@ const MOCK_VIDEOS = [
     time: "3 oy oldin",
     duration: "1:02:11",
     category: "Music",
-    description: "Diqqatni jamlash uchun tinch lo-fi musiqalar to'plami."
+    description: "Diqqatni jamlash uchun tinch lo-fi musiqalar to'plami.",
+    baseLikes: 54000,
+    videoUrl: SAMPLE_VIDEO_URLS[1]
   },
   {
     id: "v3",
@@ -44,7 +70,9 @@ const MOCK_VIDEOS = [
     time: "5 soat oldin",
     duration: "8:20",
     category: "Sports",
-    description: "So'nggi o'yin bo'yicha to'liq tahlil va gollar sharhi."
+    description: "So'nggi o'yin bo'yicha to'liq tahlil va gollar sharhi.",
+    baseLikes: 12500,
+    videoUrl: SAMPLE_VIDEO_URLS[2]
   },
   {
     id: "v4",
@@ -56,7 +84,9 @@ const MOCK_VIDEOS = [
     time: "1 kun oldin",
     duration: "15:33",
     category: "Gaming",
-    description: "Eng yaxshi highlight'lar va strategik yechimlar to'plami."
+    description: "Eng yaxshi highlight'lar va strategik yechimlar to'plami.",
+    baseLikes: 4300,
+    videoUrl: SAMPLE_VIDEO_URLS[3]
   },
   {
     id: "v5",
@@ -68,7 +98,9 @@ const MOCK_VIDEOS = [
     time: "10 soat oldin",
     duration: "6:12",
     category: "News",
-    description: "Kun davomidagi eng muhim voqealar bo'yicha qisqa sharh."
+    description: "Kun davomidagi eng muhim voqealar bo'yicha qisqa sharh.",
+    baseLikes: 6100,
+    videoUrl: SAMPLE_VIDEO_URLS[4]
   },
   {
     id: "v6",
@@ -80,7 +112,9 @@ const MOCK_VIDEOS = [
     time: "4 kun oldin",
     duration: "10:05",
     category: "Coding",
-    description: "Promise, async va await tushunchalarini misollar bilan tushuntirib beraman."
+    description: "Promise, async va await tushunchalarini misollar bilan tushuntirib beraman.",
+    baseLikes: 3900,
+    videoUrl: SAMPLE_VIDEO_URLS[5]
   },
   {
     id: "v7",
@@ -92,7 +126,9 @@ const MOCK_VIDEOS = [
     time: "1 yil oldin",
     duration: "4:48",
     category: "Music",
-    description: "Hans Zimmer'ning mashhur kompozitsiyasi pianino ijrosida."
+    description: "Hans Zimmer'ning mashhur kompozitsiyasi pianino ijrosida.",
+    baseLikes: 31000,
+    videoUrl: SAMPLE_VIDEO_URLS[6]
   },
   {
     id: "v8",
@@ -104,7 +140,9 @@ const MOCK_VIDEOS = [
     time: "6 kun oldin",
     duration: "45:22",
     category: "Coding",
-    description: "Backend va frontend'ni birlashtirib to'liq loyiha qurishni ko'rsataman."
+    description: "Backend va frontend'ni birlashtirib to'liq loyiha qurishni ko'rsataman.",
+    baseLikes: 9700,
+    videoUrl: SAMPLE_VIDEO_URLS[7]
   },
   {
     id: "v9",
@@ -116,7 +154,9 @@ const MOCK_VIDEOS = [
     time: "2 hafta oldin",
     duration: "22:10",
     category: "Gaming",
-    description: "100 kun davomida omon qolish uchun kurash — hech qanday o'lim huquqisiz."
+    description: "100 kun davomida omon qolish uchun kurash — hech qanday o'lim huquqisiz.",
+    baseLikes: 87000,
+    videoUrl: SAMPLE_VIDEO_URLS[8]
   },
   {
     id: "v10",
@@ -128,7 +168,9 @@ const MOCK_VIDEOS = [
     time: "3 kun oldin",
     duration: "9:47",
     category: "Sports",
-    description: "Mashhur klub-derbi bo'yicha statistika va asosiy lahzalar."
+    description: "Mashhur klub-derbi bo'yicha statistika va asosiy lahzalar.",
+    baseLikes: 21000,
+    videoUrl: SAMPLE_VIDEO_URLS[9]
   },
   {
     id: "v11",
@@ -140,7 +182,9 @@ const MOCK_VIDEOS = [
     time: "8 soat oldin",
     duration: "7:35",
     category: "News",
-    description: "AI sohasidagi eng so'nggi yangiliklar va tahlillar."
+    description: "AI sohasidagi eng so'nggi yangiliklar va tahlillar.",
+    baseLikes: 5400,
+    videoUrl: SAMPLE_VIDEO_URLS[10]
   },
   {
     id: "v12",
@@ -152,7 +196,9 @@ const MOCK_VIDEOS = [
     time: "Jonli efir",
     duration: "LIVE",
     category: "Live",
-    description: "Kun bo'yi davom etadigan tinch musiqa translyatsiyasi."
+    description: "Kun bo'yi davom etadigan tinch musiqa translyatsiyasi.",
+    baseLikes: 980,
+    videoUrl: SAMPLE_VIDEO_URLS[11]
   }
 ];
 
@@ -193,8 +239,142 @@ async function getVideos(query = "", category = "All") {
   return results;
 }
 
+function getVideoById(id) {
+  return MOCK_VIDEOS.find(function (v) {
+    return v.id === id;
+  });
+}
+
 function getRelatedVideos(currentId) {
   return MOCK_VIDEOS.filter(function (v) {
     return v.id !== currentId;
   }).slice(0, 8);
+}
+
+// ============================================================
+// FOYDALANUVCHI HOLATI (localStorage'da saqlanadi)
+// ------------------------------------------------------------
+// Backend yo'qligi sababli obunalar, like/dislike, izohlar va
+// ko'rish tarixi shu brauzerning localStorage'ida saqlanadi.
+// Sahifani yangilasangiz ham (bir xil brauzerda) saqlanib qoladi.
+// ============================================================
+
+var STORAGE_KEY = "ytclone_state_v1";
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { subscriptions: [], likes: {}, history: [], comments: {} };
+    const parsed = JSON.parse(raw);
+    return {
+      subscriptions: parsed.subscriptions || [],
+      likes: parsed.likes || {},
+      history: parsed.history || [],
+      comments: parsed.comments || {}
+    };
+  } catch (e) {
+    return { subscriptions: [], likes: {}, history: [], comments: {} };
+  }
+}
+
+function saveState(state) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    // localStorage yo'q yoki to'lgan bo'lishi mumkin — ilova baribir ishlashda davom etadi
+  }
+}
+
+function isSubscribed(channel) {
+  return loadState().subscriptions.indexOf(channel) !== -1;
+}
+
+function toggleSubscription(channel) {
+  const state = loadState();
+  const idx = state.subscriptions.indexOf(channel);
+  if (idx === -1) {
+    state.subscriptions.push(channel);
+  } else {
+    state.subscriptions.splice(idx, 1);
+  }
+  saveState(state);
+  return state.subscriptions.indexOf(channel) !== -1;
+}
+
+function getSubscribedVideos() {
+  const subs = loadState().subscriptions;
+  return MOCK_VIDEOS.filter(function (v) {
+    return subs.indexOf(v.channel) !== -1;
+  });
+}
+
+// reaction: "like" | "dislike" | null
+function getReaction(videoId) {
+  return loadState().likes[videoId] || null;
+}
+
+function setReaction(videoId, reaction) {
+  const state = loadState();
+  const current = state.likes[videoId] || null;
+  state.likes[videoId] = current === reaction ? null : reaction;
+  saveState(state);
+  return state.likes[videoId];
+}
+
+function addToHistory(videoId) {
+  const state = loadState();
+  state.history = state.history.filter(function (id) {
+    return id !== videoId;
+  });
+  state.history.unshift(videoId);
+  state.history = state.history.slice(0, 20);
+  saveState(state);
+}
+
+function getHistoryVideos() {
+  const ids = loadState().history;
+  return ids.map(getVideoById).filter(Boolean);
+}
+
+function clearHistory() {
+  const state = loadState();
+  state.history = [];
+  saveState(state);
+}
+
+var MOCK_COMMENTS = {
+  v1: [
+    { id: "c1", author: "Aziz Karimov", avatar: "https://i.pravatar.cc/80?img=51", text: "Juda tushunarli tushuntirdingiz, rahmat ustoz!", time: "1 kun oldin" },
+    { id: "c2", author: "Dilnoza R.", avatar: "https://i.pravatar.cc/80?img=44", text: "useEffect qismini yana biroz chuqurroq tushuntirsangiz bo'ladimi?", time: "5 soat oldin" }
+  ],
+  v6: [
+    { id: "c3", author: "Jasur T.", avatar: "https://i.pravatar.cc/80?img=8", text: "Promise.all haqida ham video qiling iltimos", time: "2 kun oldin" }
+  ],
+  v9: [
+    { id: "c4", author: "Sardor", avatar: "https://i.pravatar.cc/80?img=3", text: "20-kunda qanday omon qolganingizga hali ham ishonmayman 😂", time: "3 kun oldin" },
+    { id: "c5", author: "Malika", avatar: "https://i.pravatar.cc/80?img=9", text: "Keyingi qismini qachon joylaysiz?", time: "1 kun oldin" }
+  ]
+};
+
+function getComments(videoId) {
+  const seed = MOCK_COMMENTS[videoId] || [];
+  const userComments = loadState().comments[videoId] || [];
+  return seed.concat(userComments);
+}
+
+function addComment(videoId, text) {
+  const state = loadState();
+  if (!state.comments[videoId]) {
+    state.comments[videoId] = [];
+  }
+  const comment = {
+    id: "u" + Date.now(),
+    author: "Siz",
+    avatar: "https://i.pravatar.cc/80?img=68",
+    text: text,
+    time: "hozirgina"
+  };
+  state.comments[videoId].push(comment);
+  saveState(state);
+  return comment;
 }

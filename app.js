@@ -1,3 +1,9 @@
+// ESLATMA: Sahifa aslida shu koddan emas, index.html ichidagi inline
+// <script type="text/babel"> blokidan ishlaydi (file:// orqali ochilganda
+// ham ishlashi uchun). Bu fayl xuddi o'sha kodning o'qish uchun qulay
+// nusxasi — agar shu yerni o'zgartirsangiz, index.html ichidagini ham
+// yangilashni unutmang.
+
 const { useState, useEffect } = React;
 
 // ============================================================

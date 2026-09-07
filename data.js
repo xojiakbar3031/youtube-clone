@@ -1,12 +1,16 @@
 // ============================================================
 // MA'LUMOTLAR QATLAMI (Data Layer)
 // ------------------------------------------------------------
-// Hozircha MOCK_VIDEOS statik ro'yxatidan foydalanadi.
-// Kelajakda YouTube Data API v3 (yoki shunga o'xshash) ulanganda
-// faqat getVideos() funksiyasi ichini almashtirish kifoya —
-// qolgan barcha komponentlar shu funksiya qaytargan formatga
-// ({id, title, channel, avatar, thumbnail, views, time, duration,
-//   category, description}) mos ishlaydi.
+// Videolar RapidAPI'dagi "YouTube Media Downloader" xizmati orqali
+// HAQIQIY YouTube'dan qidirib olinadi (getVideos() ichida fetch()
+// chaqiriladi). Video ijro qilish uchun esa rasmiy YouTube <iframe>
+// embed pleeri ishlatiladi (video faylining o'zini yuklab olish
+// YouTube qoidalariga zid, shuning uchun offitsial embed — to'g'ri
+// va qonuniy yechim).
+//
+// Agar internet uzilib qolsa yoki bepul limit tugasa, pastdagi
+// MOCK_VIDEOS statik ro'yxati zaxira (fallback) sifatida ishlatiladi —
+// shu tufayli taqdimot/imtihon paytida ilova baribir ishlayveradi.
 //
 // Bundan tashqari bu faylda foydalanuvchi holatini (obunalar,
 // like/dislike, izohlar, ko'rish tarixi) brauzerning localStorage'ida
@@ -14,8 +18,60 @@
 // interfeys real ishlagandek tuyuladi.
 // ============================================================
 
-// Ochiq (public domain / CC0) namuna videolar — haqiqiy pleer sifatida
-// ishlatiladi, chunki hozircha real YouTube video fayllariga ruxsatimiz yo'q.
+// RapidAPI kaliti — bu statik (backend'siz) sayt bo'lgani uchun
+// brauzer kodida ko'rinib turadi. Bepul reja limiti tugasa,
+// rapidapi.com'da eski kalitni bekor qilib, yangisini olish kifoya.
+var RAPIDAPI_KEY = "fc7d29b405msh38994195f9ad021p1d1e86jsn425e8a5509c1";
+var RAPIDAPI_HOST = "youtube-media-downloader.p.rapidapi.com";
+
+// "All" bo'limi va har bir kategoriya uchun YouTube qidiruv so'rovi
+var CATEGORY_QUERY_MAP = {
+  All: "trending videos 2026",
+  Coding: "dasturlash tutorial",
+  Music: "music",
+  Gaming: "gaming highlights",
+  Sports: "football highlights",
+  News: "yangiliklar bugun",
+  Live: "live stream"
+};
+
+// Oxirgi fetch qilingan (yoki hozirgacha ko'rilgan) haqiqiy videolar shu
+// yerda keshlanadi — video sahifasi, "aloqador videolar" va tarix shu
+// keshdan qidiradi (chunki ular API javobidan kelgan, MOCK_VIDEOS'da yo'q).
+var VIDEO_CACHE = {};
+
+function cacheVideos(list) {
+  list.forEach(function (v) {
+    VIDEO_CACHE[v.id] = v;
+  });
+}
+
+// RapidAPI javobidagi bitta videoni ilova ishlatadigan formatga o'giradi
+function mapApiVideo(item, category) {
+  var staticThumbs = (item.thumbnails || []).filter(function (t) { return !t.moving; });
+  staticThumbs.sort(function (a, b) { return (b.width || 0) - (a.width || 0); });
+  var thumbnail = staticThumbs[0] ? staticThumbs[0].url : (item.thumbnails && item.thumbnails[0] && item.thumbnails[0].url);
+
+  var viewsNum = parseInt((item.viewCountText || "0").replace(/[^0-9]/g, ""), 10) || 0;
+
+  return {
+    id: item.id,
+    title: item.title,
+    channel: (item.channel && item.channel.name) || "Noma'lum kanal",
+    avatar: (item.channel && item.channel.avatar && item.channel.avatar[0] && item.channel.avatar[0].url) || "https://i.pravatar.cc/80?img=1",
+    thumbnail: thumbnail,
+    views: item.viewCountText || "",
+    time: item.isLiveNow ? "Jonli efir" : (item.publishedTimeText || ""),
+    duration: item.isLiveNow ? "LIVE" : (item.lengthText || ""),
+    category: category || "All",
+    description: item.description || "",
+    baseLikes: Math.max(10, Math.round(viewsNum * 0.02)),
+    videoUrl: null // haqiqiy video — pleer <iframe> orqali youtube.com/embed'dan ko'rsatiladi
+  };
+}
+
+// Ochiq (public domain / CC0) namuna videolar — API ishlamay qolsa
+// (internet yo'q, limit tugagan) zaxira sifatida ishlatiladi.
 var SAMPLE_VIDEO_URLS = [
   "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
   "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
@@ -209,44 +265,58 @@ var CATEGORIES = ["All", "Coding", "Music", "Gaming", "Sports", "News", "Live"];
 
 /**
  * Videolarni olib keladigan asosiy funksiya.
- * Hozircha MOCK_VIDEOS'dan filtrlaydi. Kelajakda buni real API
- * chaqiruviga almashtirish uchun quyidagicha yozish mumkin:
- *
- *   async function getVideos(query = "", category = "All") {
- *     const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&key=API_KEY`;
- *     const res = await fetch(url);
- *     const data = await res.json();
- *     return data.items.map(normalizeVideo); // API javobini shu fayldagi
- *                                             // {id, title, channel, ...} formatiga o'giradi
- *   }
+ * RapidAPI ("YouTube Media Downloader") orqali haqiqiy YouTube qidiruv
+ * natijalarini oladi. Agar so'rov (fetch) xato bersa — internet yo'q,
+ * kalit noto'g'ri yoki bepul limit tugagan bo'lsa — MOCK_VIDEOS'ga
+ * qaytadi, shunda ilova hech qachon "bo'sh sahifa" ko'rsatib qolmaydi.
  */
 async function getVideos(query = "", category = "All") {
-  let results = MOCK_VIDEOS;
+  const keyword = (query && query.trim() !== "")
+    ? query.trim()
+    : (CATEGORY_QUERY_MAP[category] || CATEGORY_QUERY_MAP.All);
 
-  if (category && category !== "All") {
-    results = results.filter(function (v) {
-      return v.category === category;
+  try {
+    const url = "https://" + RAPIDAPI_HOST + "/v2/search/videos?keyword=" + encodeURIComponent(keyword);
+    const res = await fetch(url, {
+      headers: {
+        "x-rapidapi-key": RAPIDAPI_KEY,
+        "x-rapidapi-host": RAPIDAPI_HOST
+      }
     });
-  }
+    if (!res.ok) throw new Error("RapidAPI HTTP " + res.status);
+    const data = await res.json();
+    const items = (data.items || []).filter(function (it) { return it.type === "video"; });
+    if (items.length === 0) throw new Error("Bo'sh natija");
 
-  if (query && query.trim() !== "") {
-    const q = query.trim().toLowerCase();
-    results = results.filter(function (v) {
-      return v.title.toLowerCase().includes(q) || v.channel.toLowerCase().includes(q);
-    });
+    const videos = items.map(function (it) { return mapApiVideo(it, category); });
+    cacheVideos(videos);
+    return videos;
+  } catch (err) {
+    console.warn("RapidAPI'dan olishda xatolik, zaxira (mock) videolar ko'rsatilmoqda:", err);
+    let results = MOCK_VIDEOS;
+    if (category && category !== "All") {
+      results = results.filter(function (v) { return v.category === category; });
+    }
+    if (query && query.trim() !== "") {
+      const q = query.trim().toLowerCase();
+      results = results.filter(function (v) {
+        return v.title.toLowerCase().includes(q) || v.channel.toLowerCase().includes(q);
+      });
+    }
+    return results;
   }
-
-  return results;
 }
 
 function getVideoById(id) {
-  return MOCK_VIDEOS.find(function (v) {
+  return VIDEO_CACHE[id] || MOCK_VIDEOS.find(function (v) {
     return v.id === id;
   });
 }
 
 function getRelatedVideos(currentId) {
-  return MOCK_VIDEOS.filter(function (v) {
+  const cached = Object.keys(VIDEO_CACHE).map(function (id) { return VIDEO_CACHE[id]; });
+  const pool = cached.length > 0 ? cached : MOCK_VIDEOS;
+  return pool.filter(function (v) {
     return v.id !== currentId;
   }).slice(0, 8);
 }
@@ -303,7 +373,8 @@ function toggleSubscription(channel) {
 
 function getSubscribedVideos() {
   const subs = loadState().subscriptions;
-  return MOCK_VIDEOS.filter(function (v) {
+  const cached = Object.keys(VIDEO_CACHE).map(function (id) { return VIDEO_CACHE[id]; });
+  return cached.concat(MOCK_VIDEOS).filter(function (v) {
     return subs.indexOf(v.channel) !== -1;
   });
 }

@@ -318,13 +318,24 @@ function WatchView({ video, related, onClose, onOpen }) {
       <div className="watch-layout">
         <div className="watch-main">
           <div className="player">
-            <video
-              className="player-video"
-              src={video.videoUrl}
-              poster={video.thumbnail}
-              controls
-              preload="metadata"
-            ></video>
+            {video.videoUrl ? (
+              <video
+                className="player-video"
+                src={video.videoUrl}
+                poster={video.thumbnail}
+                controls
+                preload="metadata"
+              ></video>
+            ) : (
+              <iframe
+                className="player-video"
+                src={"https://www.youtube.com/embed/" + video.id + "?autoplay=1"}
+                title={video.title}
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              ></iframe>
+            )}
           </div>
 
           <h1 className="watch-title">{video.title}</h1>

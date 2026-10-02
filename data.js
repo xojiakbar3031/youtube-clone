@@ -1,30 +1,10 @@
-// ============================================================
-// MA'LUMOTLAR QATLAMI (Data Layer)
-// ------------------------------------------------------------
-// Videolar RapidAPI'dagi "YouTube Media Downloader" xizmati orqali
-// HAQIQIY YouTube'dan qidirib olinadi (getVideos() ichida fetch()
-// chaqiriladi). Video ijro qilish uchun esa rasmiy YouTube <iframe>
-// embed pleeri ishlatiladi (video faylining o'zini yuklab olish
-// YouTube qoidalariga zid, shuning uchun offitsial embed — to'g'ri
-// va qonuniy yechim).
-//
-// Agar internet uzilib qolsa yoki bepul limit tugasa, pastdagi
-// MOCK_VIDEOS statik ro'yxati zaxira (fallback) sifatida ishlatiladi —
-// shu tufayli taqdimot/imtihon paytida ilova baribir ishlayveradi.
-//
-// Bundan tashqari bu faylda foydalanuvchi holatini (obunalar,
-// like/dislike, izohlar, ko'rish tarixi) brauzerning localStorage'ida
-// saqlaydigan kichik "store" ham bor — backend bo'lmasa ham
-// interfeys real ishlagandek tuyuladi.
-// ============================================================
+// videolarni RapidAPI (youtube-media-downloader) orqali olib kelamiz,
+// pleer uchun youtube.com/embed ishlatamiz
 
-// RapidAPI kaliti — bu statik (backend'siz) sayt bo'lgani uchun
-// brauzer kodida ko'rinib turadi. Bepul reja limiti tugasa,
-// rapidapi.com'da eski kalitni bekor qilib, yangisini olish kifoya.
 var RAPIDAPI_KEY = "fc7d29b405msh38994195f9ad021p1d1e86jsn425e8a5509c1";
 var RAPIDAPI_HOST = "youtube-media-downloader.p.rapidapi.com";
 
-// "All" bo'limi va har bir kategoriya uchun YouTube qidiruv so'rovi
+// kategoriya bosilganda shu so'rovlar bilan qidiriladi
 var CATEGORY_QUERY_MAP = {
   All: "trending videos 2026",
   Coding: "dasturlash tutorial",
@@ -35,9 +15,7 @@ var CATEGORY_QUERY_MAP = {
   Live: "live stream"
 };
 
-// Oxirgi fetch qilingan (yoki hozirgacha ko'rilgan) haqiqiy videolar shu
-// yerda keshlanadi — video sahifasi, "aloqador videolar" va tarix shu
-// keshdan qidiradi (chunki ular API javobidan kelgan, MOCK_VIDEOS'da yo'q).
+// fetch qilingan videolarni shu yerda saqlab qo'yamiz (related, tarix va h.k. uchun)
 var VIDEO_CACHE = {};
 
 function cacheVideos(list) {
@@ -46,7 +24,7 @@ function cacheVideos(list) {
   });
 }
 
-// RapidAPI javobidagi bitta videoni ilova ishlatadigan formatga o'giradi
+// API javobini bizga kerak bo'lgan formatga o'giradi
 function mapApiVideo(item, category) {
   var staticThumbs = (item.thumbnails || []).filter(function (t) { return !t.moving; });
   staticThumbs.sort(function (a, b) { return (b.width || 0) - (a.width || 0); });
@@ -66,12 +44,11 @@ function mapApiVideo(item, category) {
     category: category || "All",
     description: item.description || "",
     baseLikes: Math.max(10, Math.round(viewsNum * 0.02)),
-    videoUrl: null // haqiqiy video — pleer <iframe> orqali youtube.com/embed'dan ko'rsatiladi
+    videoUrl: null // null bo'lsa pleer iframe (youtube embed) ishlatadi
   };
 }
 
-// Ochiq (public domain / CC0) namuna videolar — API ishlamay qolsa
-// (internet yo'q, limit tugagan) zaxira sifatida ishlatiladi.
+// API ishlamay qolsa (limit tugagan/internet yo'q) shu namuna videolar ishlatiladi
 var SAMPLE_VIDEO_URLS = [
   "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
   "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
@@ -258,18 +235,9 @@ var MOCK_VIDEOS = [
   }
 ];
 
-// `var` ishlatilyapti (const emas) — chunki bu global o'zgaruvchi boshqa
-// <script> fayldan (app.js) foydalaniladi, va faqat `var`/funksiya
-// e'lonlarigina barcha muhitlarda ishonchli ravishda global bo'lib qoladi.
 var CATEGORIES = ["All", "Coding", "Music", "Gaming", "Sports", "News", "Live"];
 
-/**
- * Videolarni olib keladigan asosiy funksiya.
- * RapidAPI ("YouTube Media Downloader") orqali haqiqiy YouTube qidiruv
- * natijalarini oladi. Agar so'rov (fetch) xato bersa — internet yo'q,
- * kalit noto'g'ri yoki bepul limit tugagan bo'lsa — MOCK_VIDEOS'ga
- * qaytadi, shunda ilova hech qachon "bo'sh sahifa" ko'rsatib qolmaydi.
- */
+// asosiy funksiya — RapidAPI'dan videolarni olib keladi, xato bo'lsa mock'ga tushadi
 async function getVideos(query = "", category = "All") {
   const keyword = (query && query.trim() !== "")
     ? query.trim()
@@ -292,7 +260,7 @@ async function getVideos(query = "", category = "All") {
     cacheVideos(videos);
     return videos;
   } catch (err) {
-    console.warn("RapidAPI'dan olishda xatolik, zaxira (mock) videolar ko'rsatilmoqda:", err);
+    console.warn("api ishlamadi, mock videolar korsatilyapti:", err);
     let results = MOCK_VIDEOS;
     if (category && category !== "All") {
       results = results.filter(function (v) { return v.category === category; });
@@ -321,14 +289,7 @@ function getRelatedVideos(currentId) {
   }).slice(0, 8);
 }
 
-// ============================================================
-// FOYDALANUVCHI HOLATI (localStorage'da saqlanadi)
-// ------------------------------------------------------------
-// Backend yo'qligi sababli obunalar, like/dislike, izohlar va
-// ko'rish tarixi shu brauzerning localStorage'ida saqlanadi.
-// Sahifani yangilasangiz ham (bir xil brauzerda) saqlanib qoladi.
-// ============================================================
-
+// obuna/like/izoh/tarix - backend yoq shuning uchun localStorage'da saqlanadi
 var STORAGE_KEY = "ytclone_state_v1";
 
 function loadState() {

@@ -1,8 +1,5 @@
-// ESLATMA: Sahifa aslida shu koddan emas, index.html ichidagi inline
-// <script type="text/babel"> blokidan ishlaydi (file:// orqali ochilganda
-// ham ishlashi uchun). Bu fayl xuddi o'sha kodning o'qish uchun qulay
-// nusxasi — agar shu yerni o'zgartirsangiz, index.html ichidagini ham
-// yangilashni unutmang.
+// eslatma: index.html ichida ham shu kodning nusxasi bor (file:// da ishlashi uchun),
+// shu yerni ozgartirsam ozini ham ozgartirish kerak
 
 const { useState, useEffect } = React;
 
@@ -22,9 +19,7 @@ function formatCount(n) {
   return String(n);
 }
 
-// ============================================================
-// SIDEBAR
-// ============================================================
+// sidebar
 function Sidebar({ open, navView, activeCategory, onSelectHome, onSelectSubscriptions, onSelectHistory, onSelectCategory }) {
   const categoryIcons = {
     Coding: "mdi:code-tags",
@@ -75,9 +70,7 @@ function Sidebar({ open, navView, activeCategory, onSelectHome, onSelectSubscrip
   );
 }
 
-// ============================================================
-// HEADER
-// ============================================================
+// header
 function Header({ onBurgerClick, searchValue, onSearchChange, onSearchSubmit, notifOpen, onToggleNotif }) {
   return (
     <header className="header">
@@ -145,9 +138,7 @@ function Header({ onBurgerClick, searchValue, onSearchChange, onSearchSubmit, no
   );
 }
 
-// ============================================================
-// CATEGORY CHIPS
-// ============================================================
+// category chips
 function CategoryChips({ active, onSelect }) {
   return (
     <div className="chips-row">
@@ -168,9 +159,7 @@ function CategoryChips({ active, onSelect }) {
   );
 }
 
-// ============================================================
-// VIDEO CARD
-// ============================================================
+// video card
 function VideoCard({ video, onOpen }) {
   return (
     <div
@@ -197,9 +186,7 @@ function VideoCard({ video, onOpen }) {
   );
 }
 
-// ============================================================
-// VIDEO GRID
-// ============================================================
+// video grid
 function VideoGrid({ videos, onOpen, loading }) {
   if (loading) {
     return <div className="empty-state">Yuklanmoqda...</div>;
@@ -216,9 +203,7 @@ function VideoGrid({ videos, onOpen, loading }) {
   );
 }
 
-// ============================================================
-// IZOHLAR (comments) BO'LIMI
-// ============================================================
+// izohlar (comments) bo'limi
 function CommentsSection({ videoId }) {
   const [comments, setComments] = useState(function () {
     return getComments(videoId);
@@ -276,9 +261,7 @@ function CommentsSection({ videoId }) {
   );
 }
 
-// ============================================================
-// WATCH VIEW (video ochilganda ko'rinadigan sahifa)
-// ============================================================
+// watch view (video ochilganda ko'rinadigan sahifa)
 function WatchView({ video, related, onClose, onOpen }) {
   const [reaction, setReactionState] = useState(function () {
     return getReaction(video.id);
@@ -400,9 +383,7 @@ function WatchView({ video, related, onClose, onOpen }) {
   );
 }
 
-// ============================================================
-// APP (root component)
-// ============================================================
+// app (root component)
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchInput, setSearchInput] = useState("");
